@@ -26,7 +26,7 @@ The dataset must contain annotations in COCO format and scene data in npz format
 
 Note that the loaded scene data are not normalized except for image size.
 
-### Trainig
+### Training
 
 The network is trained in three stages: RGB backbone, Depth backbone, and fine-tuning.
 
@@ -39,7 +39,7 @@ A pre-trained model in ImageNet is automatically applied.
 $ cd src/
 $ ./train.py --mode rgb \
              -t PATH/TO/YOUR/TRINING_DATASET/JSON.FILE \
-             -o PATH/TO/OUTPUT/TRINED/RGB_BACKBONE \
+             -o PATH/TO/TRINED/RGB_BACKBONE/ \  # output directory
              -e 15
 ```
 
@@ -51,15 +51,15 @@ First, the RGB 3-channel ImageNet pre-training model is converted to 1-channel.
 
 ```
 $ cd src/
-$ ./build_depth_pretrained_model.py -o PATH/TO/OUTPUT/DEPTH_PRETRAINED_MODEL
+$ ./build_depth_pretrained_model.py -o PATH/TO/DEPTH_PRETRAINED_MODEL # output file
 ```
 
 Then, using this pre-training model, we train about 15 epochs with 'depth' as the mode.
 ```
 $ ./train.py --mode depth \
-             -w PATH/TO/OUTPUT/DEPTH_PRETRAINED_MODEL \
              -t PATH/TO/YOUR/TRINING_DATASET/JSON.FILE \
-             -o PATH/TO/OUTPUT/TRINED/DEPTH_BACKBONE \
+             -w PATH/TO/DEPTH_PRETRAINED_MODEL \
+             -o PATH/TO/TRINED/DEPTH_BACKBONE/ \ # output directory
              -e 15
 ```
 
@@ -71,7 +71,7 @@ First, the RGB and Depth training results are integrated.
 $ cd src/
 $ ./build_mm_pretrained_model.py -r PATH/TO/TRINED/RGB_BACKBONE \
                                  -d PATH/TO/TRINED/DEPTH_BACKBONE \
-                                 -o PATH/TO/OUTPUT/MM_BACKBONE
+                                 -o PATH/TO/MM_BACKBONE # output file
 ```
 
 Then, using this pre-training model, we train about 15 epochs with 'mm' as the mode.
@@ -80,11 +80,10 @@ It is recommended to set the learning rate 'lr' to be about ten times the RGB an
 To output the necessary config file during the evaluation, please also specify the '--save_config' option.
 
 ```
-$ cd src/
 $ ./train.py --mode mm \
-             -w PATH/TO/MM_BACKBONE \
              -t PATH/TO/YOUR/TRINING_DATASET/JSON.FILE \
-             -o PATH/TO/OUTPUT/TRINED/MM \
+             -w PATH/TO/MM_BACKBONE \
+             -o PATH/TO/OUTPUT/TRINED/MM/ \ # output directory
              -e 15 \
              --lr 0.01 \
              --lr_gamma 0.1 \
@@ -93,15 +92,18 @@ $ ./train.py --mode mm \
 ```
 
 #### Notes
-The default values for batch size '--bs=32' and learning rate ('--lr=0.001') options are set based on the assumption that training is performed on a maximum 1333 x 1000px image in an environment with two GTX6000A units (VRAM 48GB x2).
+The default values for batch size '--bs=32' and learning rate ('--lr=0.001') options are set based on the assumption that training is performed on a maximum 1333 x 1000px image in an environment with two RTX6000A units (48GB x2 VRAM).
 These values should be adjusted to match the VRAM capacity.
 The maximum image size can be specified with the '--max_image_size' option.
 
 If you need validation, specify the validation dataset with the '-v' option.
 For each epoch (number of iterations obtained by number of images of training data / batch size), losses and AP calculations are performed on the validation data.
 
+By default, the training script uses all GPUs for distributed training; if you want to limit the number of GPUs, use the '--num-gpus' option. If this option is set to 0, no GPUs are used.
+
+
 ### Evaluation
-Run test.py specifying the directory containing the trained model (and its config file) and the test data set.
+Run test.py specifying the directory containing the trained model (and its config file) and the test dataset.
 
 ```
 $ cd src/
